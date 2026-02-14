@@ -10,6 +10,7 @@ export class Calculations {
   budgetData = new BudgetData();
   capacityData = new CapacityData();
   transactionFamilies = new TransactionFamilies();
+  holdingsValueData = new HoldingsValueData();
 
   constructor(init?: Partial<Calculations>) {
     assign(this, init);
@@ -300,6 +301,169 @@ export class BudgetData {
   };
 
   forEach = (cb: (history: BudgetHistory, id: string) => void) => this.data.forEach(cb);
+}
+
+/**
+ * Per-holding value tracking summary.
+ * Note: this type is used when saving data in IndexedDB
+ * so it must be a plain object without fancy method functions.
+ */
+export class HoldingValueSummary {
+  value: number = 0; // quantity × price
+  costBasis: number = 0; // cost_basis (or inferred)
+  quantity: number = 0; // units held
+  price: number = 0; // price used for calculation
+  security_id: string = ""; // for lookups
+  account_id: string = ""; // for aggregation
+  costBasisInferred: boolean = false; // true if cost_basis was calculated
+}
+
+export type HoldingValueByMonth = { [yearMonth: string]: HoldingValueSummary };
+
+/**
+ * Helper class to abstract holding value history write & read processes.
+ * Maps yearMonth → HoldingValueSummary for a single holding.
+ */
+export class HoldingValueHistory {
+  private data: HoldingValueByMonth = {};
+  private range?: [Date, Date];
+
+  constructor(data?: HoldingValueByMonth) {
+    if (data) this.data = data;
+  }
+
+  private getKey = (date: Date) => getYearMonthString(date);
+  private getDate = (key: string) => new LocalDate(`${key}-15`);
+
+  getData = (): HoldingValueByMonth => ({ ...this.data });
+  getRange = (): [Date, Date] | undefined => this.range && [...this.range];
+
+  get startDate() {
+    return this.range && new ViewDate("month", this.range[0]);
+  }
+
+  get endDate() {
+    return this.range && new ViewDate("month", this.range[1]);
+  }
+
+  set = (date: Date, summary: HoldingValueSummary) => {
+    if (!this.range) this.range = [date, date];
+    else if (this.range[1] < date) this.range[1] = date;
+    else if (date < this.range[0]) this.range[0] = date;
+    this.data[this.getKey(date)] = summary;
+  };
+
+  get = (date: Date): HoldingValueSummary | undefined => {
+    return this.data[this.getKey(date)];
+  };
+
+  /**
+   * Get the nearest data point for a given date.
+   * If exact match exists, return it. Otherwise, find the closest prior month.
+   */
+  getNearest = (date: Date): HoldingValueSummary | undefined => {
+    const exact = this.get(date);
+    if (exact) return exact;
+
+    const targetKey = this.getKey(date);
+    const sortedKeys = Object.keys(this.data).sort();
+
+    // Find the most recent prior month
+    for (let i = sortedKeys.length - 1; i >= 0; i--) {
+      if (sortedKeys[i] <= targetKey) {
+        return this.data[sortedKeys[i]];
+      }
+    }
+
+    return undefined;
+  };
+
+  /**
+   * Returns an array of holding value history.
+   * Values are 0-indexed where 0 is the month of the given `viewDate`,
+   * 1 is the previous month, and so on.
+   */
+  toArray = (viewDate: ViewDate) => {
+    const result: HoldingValueSummary[] = [];
+    Object.entries(this.data).forEach(([key, value]) => {
+      const date = this.getDate(key);
+      if (!isDate(date)) return;
+      const span = viewDate.getSpanFrom(date);
+      if (span >= 0) result[span] = value;
+    });
+    return result;
+  };
+}
+
+/**
+ * Holdings value data stored by `holdingId` and `date`.
+ * Keyed by holdingId (per-security granularity) for earnings breakdown support.
+ */
+export class HoldingsValueData {
+  private data = new Map<string, HoldingValueHistory>();
+
+  get size() {
+    return this.data.size;
+  }
+
+  getEntries = () => Array.from(this.data.entries());
+
+  set(holdingId: string, holdingValueHistory: HoldingValueHistory): void;
+  set(holdingId: string, date: Date, summary: HoldingValueSummary): void;
+  set(
+    holdingId: string,
+    dateOrHistory: Date | HoldingValueHistory,
+    summary?: HoldingValueSummary,
+  ) {
+    if (isDate(dateOrHistory) && summary) {
+      const date = dateOrHistory;
+      if (!this.data.has(holdingId)) this.data.set(holdingId, new HoldingValueHistory());
+      const holdingData = this.data.get(holdingId)!;
+      holdingData.set(date, summary);
+    } else if (dateOrHistory instanceof HoldingValueHistory) {
+      const history = dateOrHistory;
+      this.data.set(holdingId, history);
+    }
+  }
+
+  get(holdingId: string): HoldingValueHistory;
+  get(holdingId: string, date: Date): HoldingValueSummary | undefined;
+  get(holdingId: string, date?: Date) {
+    if (!this.data.has(holdingId)) this.data.set(holdingId, new HoldingValueHistory());
+    const holdingData = this.data.get(holdingId)!;
+    if (date === undefined) return holdingData;
+    return holdingData.get(date);
+  }
+
+  /**
+   * Get the total value for an account at a given date by summing all holdings.
+   */
+  getAccountTotal = (accountId: string, date: Date): number => {
+    let total = 0;
+    this.data.forEach((history) => {
+      const summary = history.getNearest(date);
+      if (summary && summary.account_id === accountId) {
+        total += summary.value;
+      }
+    });
+    return total;
+  };
+
+  /**
+   * Get all holdings for an account at a given date (for composition view).
+   */
+  getHoldingsForAccount = (accountId: string, date: Date): HoldingValueSummary[] => {
+    const holdings: HoldingValueSummary[] = [];
+    this.data.forEach((history) => {
+      const summary = history.getNearest(date);
+      if (summary && summary.account_id === accountId) {
+        holdings.push(summary);
+      }
+    });
+    return holdings;
+  };
+
+  forEach = (cb: (history: HoldingValueHistory, id: string) => void) => this.data.forEach(cb);
 }
 
 /**

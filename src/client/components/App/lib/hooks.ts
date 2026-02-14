@@ -1,5 +1,6 @@
 import {
   getBalanceData,
+  getHoldingsValueData,
   ScreenType,
   useMemoryState,
   Calculations,
@@ -30,6 +31,8 @@ export const useData = () => {
       const {
         accounts,
         accountSnapshots,
+        holdingSnapshots,
+        securitySnapshots,
         transactions,
         splitTransactions,
         investmentTransactions,
@@ -44,7 +47,15 @@ export const useData = () => {
         const balanceData = getBalanceData(
           accounts,
           accountSnapshots,
+          holdingSnapshots,
+          securitySnapshots,
           transactions,
+          investmentTransactions,
+        );
+
+        const holdingsValueData = getHoldingsValueData(
+          holdingSnapshots,
+          securitySnapshots,
           investmentTransactions,
         );
 
@@ -59,7 +70,13 @@ export const useData = () => {
 
         const capacityData = getCapacityData(budgets, sections, categories);
 
-        newCalculations.update({ balanceData, transactionFamilies, budgetData, capacityData });
+        newCalculations.update({
+          balanceData,
+          holdingsValueData,
+          transactionFamilies,
+          budgetData,
+          capacityData,
+        });
 
         newCalculations.status.isInit = true;
         newCalculations.status.isLoading = false;

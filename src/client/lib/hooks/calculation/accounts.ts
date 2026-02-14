@@ -10,10 +10,13 @@ import {
   useAppContext,
   AccountDictionary,
   AccountSnapshotDictionary,
+  HoldingSnapshotDictionary,
+  SecuritySnapshotDictionary,
   InvestmentTransactionDictionary,
   TransactionDictionary,
   BalanceData,
 } from "client";
+import { getBalanceDataFromHoldingSnapshots } from "./holdings";
 
 export const getAccountBalance = (account: Account) => {
   const balanceCurrent = account.balances.current || 0;
@@ -119,46 +122,102 @@ const getBalanceDataFromSnapshots = (
   return balanceData;
 };
 
+/**
+ * Get balance data with 3-tier fallback:
+ * 1. Account Snapshot (highest priority)
+ * 2. Holding Snapshot (calculated from holdings value)
+ * 3. Transactions (lowest priority)
+ */
 export const getBalanceData = (
   accounts: AccountDictionary,
   accountSnapshots: AccountSnapshotDictionary,
+  holdingSnapshots: HoldingSnapshotDictionary,
+  securitySnapshots: SecuritySnapshotDictionary,
   transactions: TransactionDictionary,
   investmentTransactions: InvestmentTransactionDictionary,
 ) => {
+  // Tier 3: Transaction-based balance (lowest priority)
   const transactionBasedData = getBalanceDataFromTransactions(
     accounts,
     transactions,
     investmentTransactions,
   );
 
+  // Tier 2: Holding-snapshot-based balance (medium priority)
+  const holdingBasedData = getBalanceDataFromHoldingSnapshots(
+    accounts,
+    holdingSnapshots,
+    securitySnapshots,
+  );
+
+  // Tier 1: Account-snapshot-based balance (highest priority)
   const snapshotBasedData = getBalanceDataFromSnapshots(accounts, accountSnapshots);
 
   const mergedData = new BalanceData();
 
   accounts.forEach(({ id, graphOptions }) => {
-    const startDate1 = transactionBasedData.get(id).startDate!;
-    const startDate2 = snapshotBasedData.get(id).startDate!;
-    const startDate = startDate1.getEndDate() < startDate2.getEndDate() ? startDate1 : startDate2;
+    // Find the earliest and latest dates across all data sources
+    const dates: Date[] = [];
+    const transactionHistory = transactionBasedData.get(id);
+    const holdingHistory = holdingBasedData.get(id);
+    const snapshotHistory = snapshotBasedData.get(id);
 
-    const endDate1 = transactionBasedData.get(id).endDate!;
-    const endDate2 = snapshotBasedData.get(id).endDate!;
-    const endDate = endDate1.getEndDate() < endDate2.getEndDate() ? endDate2 : endDate1;
+    if (transactionHistory.startDate) dates.push(transactionHistory.startDate.getEndDate());
+    if (holdingHistory.startDate) dates.push(holdingHistory.startDate.getEndDate());
+    if (snapshotHistory.startDate) dates.push(snapshotHistory.startDate.getEndDate());
+
+    if (dates.length === 0) return;
+
+    const startDate = new ViewDate("month", new Date(Math.min(...dates.map((d) => d.getTime()))));
+
+    const endDates: Date[] = [];
+    if (transactionHistory.endDate) endDates.push(transactionHistory.endDate.getEndDate());
+    if (holdingHistory.endDate) endDates.push(holdingHistory.endDate.getEndDate());
+    if (snapshotHistory.endDate) endDates.push(snapshotHistory.endDate.getEndDate());
+
+    if (endDates.length === 0) return;
+
+    const endDate = new ViewDate(
+      "month",
+      new Date(Math.max(...endDates.map((d) => d.getTime()))),
+    );
 
     const { useTransactions = true, useSnapshots = true } = graphOptions;
 
     let previouslyUsedBalance = 0;
     while (startDate.getEndDate() <= endDate.getEndDate()) {
       const date = startDate.getEndDate();
-      const transactionBasedBalance = transactionBasedData.get(id, date);
-      const snapshotBasedBalance = snapshotBasedData.get(id, date);
-      let balance = 0;
-      if (useSnapshots && snapshotBasedBalance) {
-        balance = snapshotBasedBalance;
-      } else if (useTransactions && transactionBasedBalance) {
-        balance = transactionBasedBalance;
-      } else {
+      let balance: number | undefined;
+
+      // Priority 1: Account snapshot
+      if (useSnapshots) {
+        const snapshotBalance = snapshotBasedData.get(id, date);
+        if (snapshotBalance !== undefined) {
+          balance = snapshotBalance;
+        }
+      }
+
+      // Priority 2: Holding snapshot (calculated from holdings value)
+      if (balance === undefined && useSnapshots) {
+        const holdingBalance = holdingBasedData.get(id, date);
+        if (holdingBalance !== undefined) {
+          balance = holdingBalance;
+        }
+      }
+
+      // Priority 3: Transactions
+      if (balance === undefined && useTransactions) {
+        const transactionBalance = transactionBasedData.get(id, date);
+        if (transactionBalance !== undefined) {
+          balance = transactionBalance;
+        }
+      }
+
+      // Fallback to previous value
+      if (balance === undefined) {
         balance = previouslyUsedBalance;
       }
+
       mergedData.set(id, date, balance);
       previouslyUsedBalance = balance;
       startDate.next();
