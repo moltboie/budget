@@ -67,23 +67,60 @@ export const searchSnapshots = async (
   user: MaskedUser | null,
   options: SearchSnapshotsOptions = {},
 ): Promise<JSONSnapshotData[]> => {
-  const { sql, values } = buildSelectWithFilters(SNAPSHOTS, "*", {
-    user_id: user?.user_id,
-    filters: {
-      [SNAPSHOT_TYPE]: options.snapshot_type,
-      [ACCOUNT_ID]: options.account_id,
-      [SECURITY_ID]: options.security_id,
-    },
-    inFilters: options.account_ids?.length ? { [ACCOUNT_ID]: options.account_ids } : undefined,
-    dateRange:
-      options.startDate || options.endDate
-        ? { column: SNAPSHOT_DATE, start: options.startDate, end: options.endDate }
-        : undefined,
-    orderBy: `${SNAPSHOT_DATE} DESC`,
-    limit: options.limit,
+  // Security snapshots don't have user_id (they're global price data)
+  // So we need to handle them separately when fetching all snapshot types
+  const isSecurityOnly = options.snapshot_type === "security";
+  const isAllTypes = !options.snapshot_type;
+
+  // Fetch user-specific snapshots (account_balance, holding)
+  const userSnapshots: JSONSnapshotData[] = [];
+  if (!isSecurityOnly) {
+    const { sql, values } = buildSelectWithFilters(SNAPSHOTS, "*", {
+      user_id: user?.user_id,
+      filters: {
+        [SNAPSHOT_TYPE]: options.snapshot_type,
+        [ACCOUNT_ID]: options.account_id,
+      },
+      inFilters: options.account_ids?.length ? { [ACCOUNT_ID]: options.account_ids } : undefined,
+      dateRange:
+        options.startDate || options.endDate
+          ? { column: SNAPSHOT_DATE, start: options.startDate, end: options.endDate }
+          : undefined,
+      orderBy: `${SNAPSHOT_DATE} DESC`,
+      limit: options.limit,
+    });
+    const result = await pool.query<Record<string, unknown>>(sql, values);
+    userSnapshots.push(...result.rows.map(rowToSnapshot));
+  }
+
+  // Fetch security snapshots (global, no user_id)
+  const securitySnapshots: JSONSnapshotData[] = [];
+  if (isSecurityOnly || isAllTypes) {
+    const { sql, values } = buildSelectWithFilters(SNAPSHOTS, "*", {
+      filters: {
+        [SNAPSHOT_TYPE]: "security",
+        [SECURITY_ID]: options.security_id,
+      },
+      dateRange:
+        options.startDate || options.endDate
+          ? { column: SNAPSHOT_DATE, start: options.startDate, end: options.endDate }
+          : undefined,
+      orderBy: `${SNAPSHOT_DATE} DESC`,
+      limit: options.limit,
+    });
+    const result = await pool.query<Record<string, unknown>>(sql, values);
+    securitySnapshots.push(...result.rows.map(rowToSnapshot));
+  }
+
+  // Combine and sort by date DESC
+  const allSnapshots = [...userSnapshots, ...securitySnapshots];
+  allSnapshots.sort((a, b) => {
+    const dateA = new Date(a.snapshot.date).getTime();
+    const dateB = new Date(b.snapshot.date).getTime();
+    return dateB - dateA;
   });
-  const result = await pool.query<Record<string, unknown>>(sql, values);
-  return result.rows.map(rowToSnapshot);
+
+  return options.limit ? allSnapshots.slice(0, options.limit) : allSnapshots;
 };
 
 export const getAccountSnapshots = async (
