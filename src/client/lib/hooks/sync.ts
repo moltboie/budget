@@ -29,6 +29,7 @@ import {
   AccountSnapshot,
   HoldingSnapshot,
   SecuritySnapshot,
+  Security,
   useAppContext,
   call,
   cachedCall,
@@ -45,6 +46,7 @@ import {
   AccountSnapshotDictionary,
   HoldingSnapshotDictionary,
   SecuritySnapshotDictionary,
+  SecurityDictionary,
   InstitutionDictionary,
   Institution,
   useDebounce,
@@ -149,21 +151,24 @@ const fetchSplitTransactions = async (): Promise<FetchSplitTransactionsResult> =
 interface FetchAccountsResult {
   accounts: AccountDictionary;
   items: ItemDictionary;
+  securities: SecurityDictionary;
 }
 
 const fetchAccounts = async (): Promise<FetchAccountsResult> => {
   const result = {
     accounts: new AccountDictionary(),
     items: new ItemDictionary(),
+    securities: new SecurityDictionary(),
   };
 
   const response = await call.get<AccountsGetResponse>("/api/accounts").catch(console.error);
   if (!response?.body) return result;
 
-  const { accounts, items } = response.body;
+  const { accounts, items, securities } = response.body;
 
   accounts.forEach((e) => result.accounts.set(e.account_id, new Account(e)));
   items.forEach((item) => result.items.set(item.item_id, new Item(item)));
+  securities?.forEach((s) => result.securities.set(s.security_id, new Security(s)));
 
   return result;
 };
@@ -325,7 +330,7 @@ export const useSync = () => {
       const institutionsPromise = accountsPromise.then((r) => fetchInstitutions(r.accounts));
 
       const [
-        { accounts, items },
+        { accounts, items, securities },
         { transactions, investmentTransactions },
         { splitTransactions },
         { accountSnapshots, holdingSnapshots, securitySnapshots },
@@ -345,6 +350,7 @@ export const useSync = () => {
       const newData = new Data({
         accounts,
         items,
+        securities,
         transactions,
         splitTransactions,
         investmentTransactions,

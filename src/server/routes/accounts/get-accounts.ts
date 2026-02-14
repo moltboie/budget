@@ -1,10 +1,11 @@
-import { JSONAccount, JSONHolding, JSONItem } from "common";
-import { Route, searchAccounts, searchItems, getHoldings } from "server";
+import { JSONAccount, JSONHolding, JSONItem, JSONSecurity } from "common";
+import { Route, searchAccounts, searchItems, getHoldings, searchSecuritiesById } from "server";
 
 export interface AccountsGetResponse {
   items: JSONItem[];
   accounts: JSONAccount[];
   holdings: JSONHolding[];
+  securities: JSONSecurity[];
 }
 
 export const getAccountsRoute = new Route<AccountsGetResponse>("GET", "/accounts", async (req) => {
@@ -21,7 +22,12 @@ export const getAccountsRoute = new Route<AccountsGetResponse>("GET", "/accounts
     searchAccounts(user),
     getHoldings(user),
   ]);
-  const body = { items, accounts, holdings };
+
+  // Get unique security IDs from holdings and fetch their details
+  const securityIds = [...new Set(holdings.map((h) => h.security_id))];
+  const securities = await searchSecuritiesById(securityIds);
+
+  const body = { items, accounts, holdings, securities };
 
   return { status: "success", body };
 });

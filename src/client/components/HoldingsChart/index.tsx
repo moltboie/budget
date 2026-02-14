@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { numberToCommaString, getYearMonthString, LocalDate } from "common";
-import { colors, Donut, DonutData, useAppContext, Security } from "client";
+import { colors, Donut, DonutData, useAppContext } from "client";
 import "./index.css";
 
 interface HoldingDisplay {
@@ -23,7 +23,7 @@ interface HoldingsChartProps {
 export const HoldingsChart = ({ accountIds }: HoldingsChartProps) => {
   const { data, calculations, viewDate } = useAppContext();
   const { holdingsValueData } = calculations;
-  const { securitySnapshots } = data;
+  const { securities } = data;
 
   const { holdings, totalValue, totalPreviousValue, totalGainLoss, totalGainLossPercent } =
     useMemo(() => {
@@ -41,18 +41,9 @@ export const HoldingsChart = ({ accountIds }: HoldingsChartProps) => {
       console.log("Previous Date:", previousDate, "YearMonth:", previousYearMonth);
       console.log("Account IDs:", accountIds);
       console.log("Holdings Value Data size:", holdingsValueData.size);
-      console.log("Security Snapshots size:", securitySnapshots.size);
-
-      // Build security lookup map for ticker symbols
-      const securityMap = new Map<string, Security>();
-      securitySnapshots.forEach(({ security }) => {
-        if (!securityMap.has(security.security_id)) {
-          securityMap.set(security.security_id, security);
-        }
-      });
-      console.log("Security Map size:", securityMap.size);
-      console.log("Securities:", Array.from(securityMap.entries()).map(([id, s]) => ({
-        id,
+      console.log("Securities size:", securities.size);
+      console.log("Securities:", securities.toArray().map((s) => ({
+        id: s.security_id,
         ticker: s.ticker_symbol,
         name: s.name
       })));
@@ -80,7 +71,7 @@ export const HoldingsChart = ({ accountIds }: HoldingsChartProps) => {
           return;
         }
 
-        const security = securityMap.get(currentData.security_id);
+        const security = securities.get(currentData.security_id);
         console.log("  Security lookup:", security);
 
         const value = currentData.value;
@@ -131,7 +122,7 @@ export const HoldingsChart = ({ accountIds }: HoldingsChartProps) => {
         totalGainLoss,
         totalGainLossPercent,
       };
-    }, [holdingsValueData, securitySnapshots, accountIds, viewDate]);
+    }, [holdingsValueData, securities, accountIds, viewDate]);
 
   if (holdings.length === 0) {
     return null;

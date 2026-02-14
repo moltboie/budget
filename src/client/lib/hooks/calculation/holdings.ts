@@ -228,7 +228,20 @@ export const getHoldingsValueData = (
   securitySnapshots: SecuritySnapshotDictionary,
   investmentTransactions: InvestmentTransactionDictionary,
 ): HoldingsValueData => {
+  console.group("[getHoldingsValueData] Building holdings value data");
+  console.log("Holding snapshots count:", holdingSnapshots.size);
+  console.log("Security snapshots count:", securitySnapshots.size);
+  console.log("Investment transactions count:", investmentTransactions.size);
+
   const securityPriceByMonth = buildSecurityPriceIndex(securitySnapshots);
+  console.log("Security price index size:", securityPriceByMonth.size);
+  console.log("Security price index:", Object.fromEntries(
+    Array.from(securityPriceByMonth.entries()).map(([id, prices]) => [
+      id.substring(0, 8) + "...",
+      Object.fromEntries(prices.entries())
+    ])
+  ));
+
   const holdingsValueData = new HoldingsValueData();
 
   // Group by holdingId + yearMonth, take latest snapshot
@@ -245,6 +258,8 @@ export const getHoldingsValueData = (
     }
   });
 
+  console.log("Grouped snapshots count:", snapshotsByHoldingMonth.size);
+
   // Calculate value for each holding per month
   snapshotsByHoldingMonth.forEach((hs, key) => {
     const [holding_id, yearMonth] = key.split(":");
@@ -254,6 +269,16 @@ export const getHoldingsValueData = (
 
     // Get price with fallback
     const price = getPriceForHolding(holding, securityPriceByMonth, yearMonth);
+
+    console.log(`[Holding ${holding_id.substring(0, 12)}...] ${yearMonth}:`, {
+      security_id: security_id.substring(0, 8) + "...",
+      quantity,
+      cost_basis,
+      institution_price: holding.institution_price,
+      institution_value: holding.institution_value,
+      calculatedPrice: price,
+      calculatedValue: quantity * price,
+    });
 
     // Get cost basis with inference if invalid
     let finalCostBasis = cost_basis || 0;
@@ -269,6 +294,7 @@ export const getHoldingsValueData = (
         securityPriceByMonth,
       );
       costBasisInferred = true;
+      console.log(`  -> Cost basis inferred: ${finalCostBasis}`);
     }
 
     const summary = new HoldingValueSummary();
@@ -282,6 +308,9 @@ export const getHoldingsValueData = (
 
     holdingsValueData.set(holding_id, date, summary);
   });
+
+  console.log("Final holdings value data size:", holdingsValueData.size);
+  console.groupEnd();
 
   return holdingsValueData;
 };
