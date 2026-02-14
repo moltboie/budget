@@ -5,6 +5,7 @@ import {
   BalanceChartRow,
   FlowChartProperties,
   FlowChartRow,
+  HoldingsComposition,
   ProjectionChartProperties,
   ProjectionChartRow,
 } from "client/components";
@@ -33,6 +34,7 @@ export const ChartDetailPage = () => {
       <div className="ChartDetailPage">
         <BalanceChartProperties chart={balanceChart}>
           <BalanceChartRow showTitle={false} chart={balanceChart} />
+          <HoldingsComposition showTitle={false} chart={balanceChart} />
         </BalanceChartProperties>
       </div>
     );

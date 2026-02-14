@@ -1,0 +1,152 @@
+.HoldingsComposition {
+  padding: 10px;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.HoldingsComposition.dragging {
+  opacity: 0.5;
+}
+
+.HoldingsComposition .title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.HoldingsComposition .title button {
+  background: none;
+  border: none;
+  cursor: grab;
+  padding: 5px;
+}
+
+.HoldingsComposition .title .reorderIcon {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.HoldingsComposition .emptyMessage {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+}
+
+.HoldingsComposition .composition {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.HoldingsComposition .pieContainer {
+  position: relative;
+  width: 150px;
+  min-width: 150px;
+  height: 150px;
+}
+
+.HoldingsComposition .pie {
+  width: 100%;
+  height: 100%;
+}
+
+.HoldingsComposition .pieCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.HoldingsComposition .pieCenter .totalValue {
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.HoldingsComposition .pieCenter .totalGain {
+  font-size: 0.7em;
+}
+
+.HoldingsComposition .holdingsTable {
+  flex: 1;
+  border-collapse: collapse;
+  font-size: 0.85em;
+}
+
+.HoldingsComposition .holdingsTable th {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid #ddd;
+  font-weight: 600;
+  color: #666;
+}
+
+.HoldingsComposition .holdingsTable td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.HoldingsComposition .holdingsTable .securityName {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.HoldingsComposition .holdingsTable .inferredIcon {
+  margin-left: 4px;
+  color: #888;
+  cursor: help;
+}
+
+.HoldingsComposition .holdingsTable .value,
+.HoldingsComposition .holdingsTable .costBasis,
+.HoldingsComposition .holdingsTable .gain {
+  text-align: right;
+  font-family: monospace;
+}
+
+.HoldingsComposition .holdingsTable .gain.positive {
+  color: #22c55e;
+}
+
+.HoldingsComposition .holdingsTable .gain.negative {
+  color: #ef4444;
+}
+
+.HoldingsComposition .holdingsTable tfoot .totalsRow {
+  font-weight: 600;
+}
+
+.HoldingsComposition .holdingsTable tfoot .totalsRow td {
+  border-top: 2px solid #ddd;
+  border-bottom: none;
+  padding-top: 8px;
+}
+
+.HoldingsComposition .totalGain.positive {
+  color: #22c55e;
+}
+
+.HoldingsComposition .totalGain.negative {
+  color: #ef4444;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 600px) {
+  .HoldingsComposition .composition {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .HoldingsComposition .holdingsTable {
+    width: 100%;
+  }
+}
