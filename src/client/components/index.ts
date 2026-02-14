@@ -32,3 +32,4 @@ export * from "./ProjectionChartProperties";
 export * from "./BalanceChartProperties";
 export * from "./FlowChartProperties";
 export * from "./HoldingsComposition";
+export * from "./HoldingsChart";

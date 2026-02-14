@@ -13,6 +13,7 @@ import {
   indexedDb,
   StoreName,
 } from "client";
+import { HoldingsChart } from "./HoldingsChart";
 
 interface BalanceChartPropertiesProps {
   chart: BalanceChart;
@@ -126,6 +127,8 @@ export const BalanceChartProperties = ({ chart, children }: BalanceChartProperti
       </div>
 
       {children}
+
+      <HoldingsChart accountIds={account_ids} />
 
       <div className="propertyLabel">&nbsp;</div>
       <div className="property">

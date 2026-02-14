@@ -1,0 +1,84 @@
+.HoldingsChart {
+  margin-top: 1rem;
+}
+
+.HoldingsChart .chartSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.HoldingsChart .donutContainer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.HoldingsChart .donutLabel {
+  display: flex;
+  flex-direction: column;
+}
+
+.HoldingsChart .totalValue {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.HoldingsChart .gainLoss {
+  font-size: 0.9rem;
+}
+
+.HoldingsChart .gainLoss.positive {
+  color: var(--positive-color, #22c55e);
+}
+
+.HoldingsChart .gainLoss.negative {
+  color: var(--negative-color, #ef4444);
+}
+
+.HoldingsChart .holdingsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.HoldingsChart .holdingsTable th {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  font-weight: 500;
+}
+
+.HoldingsChart .holdingsTable td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.HoldingsChart .holdingsTable td.security {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.HoldingsChart .holdingsTable .inferred {
+  font-size: 0.75rem;
+  color: var(--muted-color, #9ca3af);
+  cursor: help;
+}
+
+.HoldingsChart .holdingsTable td.positive {
+  color: var(--positive-color, #22c55e);
+}
+
+.HoldingsChart .holdingsTable td.negative {
+  color: var(--negative-color, #ef4444);
+}
+
+.HoldingsChart .holdingsTable .totalRow {
+  font-weight: 600;
+}
+
+.HoldingsChart .holdingsTable .totalRow td {
+  border-bottom: none;
+  border-top: 2px solid var(--border-color, #e5e7eb);
+}
