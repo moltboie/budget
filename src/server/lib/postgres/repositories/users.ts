@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { DeepPartial } from "common";
 import { MaskedUser, User, usersTable, USER_ID } from "../models";
+import { logger } from "../../logger";
 
 export type IndexUserInput = Omit<User, "user_id"> & { user_id?: string };
 export type PartialUser = { user_id: string } & DeepPartial<User>;

@@ -10,6 +10,7 @@ import {
 import { MaskedUser, updateItemStatus, logger } from "server";
 import { JSONItem, ItemStatus, getDateString, LocalDate } from "common";
 import { getClient, ignorable_error_codes } from "./util";
+import { logger } from "../logger";
 
 export interface PlaidTransaction extends Transaction {}
 

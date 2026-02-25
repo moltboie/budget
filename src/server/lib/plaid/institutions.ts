@@ -2,6 +2,7 @@ import { CountryCode } from "plaid";
 import { MaskedUser, logger } from "server";
 import { JSONInstitution } from "common";
 import { getClient } from "./util";
+import { logger } from "../logger";
 
 export const getInstitution = async (
   user: MaskedUser,

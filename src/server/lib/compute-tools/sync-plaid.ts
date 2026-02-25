@@ -32,6 +32,7 @@ import {
   upsertSecuritiesWithSnapshots,
 } from "./create-snapshots";
 import { Products } from "plaid";
+import { logger } from "../logger";
 
 /** Build O(n) lookup maps for stored transactions to avoid O(n²) in modelize. */
 export const buildTransactionLookupMaps = (
@@ -142,60 +143,6 @@ export const syncPlaidTransactions = async (item_id: string) => {
         .then(() => upsertItems(user, partialItems))
         .catch((err) => {
           logger.error("Error occurred during storing Plaid transactions data", { itemId: item_id }, err);
-          throw err; // Re-throw to propagate error to caller
-        });
-    });
-
-  const syncInvestmentTransactions =
-    item.available_products.includes(Products.Investments) &&
-    plaid.getInvestmentTransactions(user, [item]).then(async (r) => {
-      const { items, investmentTransactions } = r;
-
-      const fillDateStrings = (e: (typeof investmentTransactions)[0]) => {
-        const result: JSONInvestmentTransaction = { ...e, label: {} };
-        const { date } = e;
-        if (date) result.date = getDateTimeString(date);
-        return result;
-      };
-
-      const filledInvestments = investmentTransactions.map(fillDateStrings);
-
-      // Get stored investment transactions
-      const storedTransactionsResult = await storedTransactionsPromise;
-      const storedInvestmentTransactions = storedTransactionsResult.investment_transactions || [];
-
-      const removed = getPlaidRemovedInvestmentTransactions(
-        filledInvestments,
-        storedInvestmentTransactions,
-      );
-      const removedIdSet = new Set(removed.map((r) => r.investment_transaction_id));
-
-      // Adjust counters for recent stored transactions that are still present (modified).
-      storedInvestmentTransactions.forEach((e) => {
-        const age = new Date().getTime() - new LocalDate(e.date).getTime();
-        if (age > TWO_WEEKS) return;
-        if (!removedIdSet.has(e.investment_transaction_id)) {
-          modifiedCount += 1;
-          addedCount -= 1;
-        }
-      });
-
-      const removedIds = removed.map((r) => r.investment_transaction_id);
-
-      const updateJobs = [
-        upsertInvestmentTransactions(user, filledInvestments),
-        deleteInvestmentTransactions(user, removedIds),
-      ];
-
-      const partialItems = items.map(({ item_id, updated }) => ({ item_id, updated }));
-      return Promise.all(updateJobs)
-        .then(() => {
-          addedCount += filledInvestments.length;
-          removedCount += removed.length;
-        })
-        .then(() => upsertItems(user, partialItems))
-        .catch((err) => {
-          logger.error("Error occurred during storing Plaid investment transactions data", { itemId: item_id }, err);
           throw err; // Re-throw to propagate error to caller
         });
     });

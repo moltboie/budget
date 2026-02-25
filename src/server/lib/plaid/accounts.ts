@@ -2,6 +2,7 @@ import { PlaidError, PlaidErrorType } from "plaid";
 import { MaskedUser, updateItemStatus, logger } from "server";
 import { JSONItem, JSONHolding, JSONSecurity, ItemStatus, JSONAccount } from "common";
 import { getClient, ignorable_error_codes } from "./util";
+import { logger } from "../logger";
 
 export type ItemError = PlaidError & { item_id: string };
 
