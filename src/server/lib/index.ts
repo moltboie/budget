@@ -8,4 +8,3 @@ export * from "./postgres";
 export * from "./object";
 export * from "./compute-tools";
 export * from "./validation";
-export { logger } from "./logger";
