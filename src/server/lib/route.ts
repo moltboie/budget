@@ -1,6 +1,9 @@
 import { RequestHandler, Request, Response } from "express";
 import { logger } from "server";
+<<<<<<< HEAD
 import { sendAlarm } from "server/lib/alarm";
+=======
+>>>>>>> 21a2b3b (refactor: import logger from 'server' following cross-directory convention)
 
 export type Method = "GET" | "POST" | "DELETE";
 

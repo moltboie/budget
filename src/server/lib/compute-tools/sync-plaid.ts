@@ -32,7 +32,6 @@ import {
   upsertSecuritiesWithSnapshots,
 } from "./create-snapshots";
 import { Products } from "plaid";
-import { logger } from "../logger";
 
 /** Build O(n) lookup maps for stored transactions to avoid O(n²) in modelize. */
 export const buildTransactionLookupMaps = (

@@ -3,7 +3,6 @@ import { getAllItems, logger, updateItemSyncStatus } from "server";
 import { sendAlarm } from "server/lib/alarm";
 import { syncPlaidAccounts, syncPlaidTransactions } from "./sync-plaid";
 import { syncSimpleFinData } from "./sync-simple-fin";
-import { logger } from "../logger";
 
 let isSyncing = false;
 
