@@ -155,6 +155,39 @@ import { GraphInput } from "../../../components/Graph/lib/graph";
 - Use explicit return types for exported functions
 - Prefer interfaces over type aliases for objects
 
+### Session Security
+
+**Session fixation prevention:** Always regenerate the session ID after successful authentication:
+
+```typescript
+req.session.regenerate((err) => {
+  if (err) { /* handle error */ }
+  req.session.user = user;
+  req.session.save((err) => { /* respond */ });
+});
+```
+
+This ensures an attacker who obtains a pre-auth session ID cannot use it after the user logs in (see PR #144).
+
+**Defensive null checks:** When accessing optional collections from the database, always handle the empty/undefined case before operating on them. A crash in a utility function (e.g., `getActiveCapacity`) can take down the route even if the caller has error handling (see PR #139).
+
+### Timer and Interval Cleanup
+
+Module-scope `setInterval`/`setTimeout` calls must store a reference and export a cleanup function. Otherwise:
+- Graceful shutdown cannot clear them
+- Test processes hang after completion
+- The event loop stays alive unnecessarily
+
+```typescript
+// ✅ Good — cleanup-able
+let timer: ReturnType<typeof setInterval> | null = null;
+export const start = () => { timer = setInterval(fn, ms); };
+export const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+
+// ❌ Bad — fire-and-forget
+setInterval(fn, ms);
+```
+
 ### Error Handling
 
 Server routes catch errors and return 500:
